@@ -1,0 +1,51 @@
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: require-probes
+  annotations:
+    policies.kyverno.io/title: Require Probes
+    policies.kyverno.io/category: Best Practices, Reliability
+    policies.kyverno.io/severity: medium
+    policies.kyverno.io/description: >-
+      Liveness and readiness probes are critical for application reliability, self-healing,
+      and zero-downtime rolling updates. This policy checks that all containers in a Pod 
+      define both liveness and readiness health checks.
+spec:
+  validationFailureAction: Enforce
+  background: true
+  rules:
+    - name: validate-liveness-probe
+      match:
+        any:
+          - resources:
+              kinds:
+                - Pod
+      exclude:
+        any:
+          - resources:
+              namespaces:
+                - local-path-storage
+      validate:
+        message: "Liveness probe is required for all containers."
+        pattern:
+          spec:
+            containers:
+              - livenessProbe: {}
+
+    - name: validate-readiness-probe
+      match:
+        any:
+          - resources:
+              kinds:
+                - Pod
+      exclude:
+        any:
+          - resources:
+              namespaces:
+                - local-path-storage
+      validate:
+        message: "Readiness probe is required for all containers."
+        pattern:
+          spec:
+            containers:
+              - readinessProbe: {}

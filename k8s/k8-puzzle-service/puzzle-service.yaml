@@ -1,0 +1,73 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: puzzle-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: puzzle-service
+  template:
+    metadata:
+      labels:
+        app: puzzle-service
+    spec:
+      serviceAccountName: puzzle-service-sa
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        fsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: puzzle-service
+          securityContext:
+            privileged: false
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+          image: yassine123432/puzzle-service@sha256:62c111f44f2a1879791ebd8572648121216868e77141462059f23ab427db1911
+          ports:
+            - containerPort: 3002
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              cpu: 200m
+              memory: 256Mi
+          envFrom:
+            - configMapRef:
+                name: mindgrid-config
+            - configMapRef:
+                name: puzzle-service-config
+            - secretRef:
+                name: mindgrid-secrets
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 3002
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 3002
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          volumeMounts:
+            # Python tempfile and general scratch space
+            - name: tmp-dir
+              mountPath: /tmp
+            # Gunicorn heartbeat: workers write state files to /.gunicorn
+            # (hardcoded in gunicorn source — cannot be changed without a custom image)
+            - name: gunicorn-heartbeat
+              mountPath: /.gunicorn
+      volumes:
+        - name: tmp-dir
+          emptyDir: {}
+        - name: gunicorn-heartbeat
+          emptyDir: {}

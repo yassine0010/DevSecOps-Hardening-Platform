@@ -1,0 +1,17 @@
+apiVersion: gateway.nginx.org/v1alpha1
+kind: RateLimitPolicy
+metadata:
+  name: auth-login-rate-limit
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: auth-login-route
+  rateLimit:
+    rejectCode: 429
+    local:
+      rules:
+        - key: "$binary_remote_addr"
+          rate: "5r/s"
+          burst: 10
+          delay: 5

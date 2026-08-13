@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: leaderboard-service-config
+data:
+  PORT: "3003"
+  PUZZLE_SERVICE_URL: http://puzzle-service:3002

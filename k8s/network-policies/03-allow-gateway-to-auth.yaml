@@ -1,0 +1,25 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-gateway-to-auth
+  labels:
+    security: ingress-control
+    component: auth-service
+spec:
+  # Target: auth-service pod
+  podSelector:
+    matchLabels:
+      app: auth-service
+  policyTypes:
+    - Ingress
+  ingress:
+    # Only the NGINX Gateway Fabric data-plane pods may reach auth-service.
+    # The gateway pods run in the same (default) namespace, so only a
+    # podSelector is needed — no namespaceSelector required.
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: myapp-gateway-nginx
+      ports:
+        - protocol: TCP
+          port: 3001

@@ -1,0 +1,38 @@
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: verify-image-signatures
+  annotations:
+    policies.kyverno.io/title: Verify Image Signatures
+    policies.kyverno.io/category: Software Supply Chain Security
+    policies.kyverno.io/severity: high
+    policies.kyverno.io/description: >-
+      Requires images from our registry to be signed via cosign keyless signing
+      with the approved identity before they can be admitted. Third-party images
+      (postgres, busybox, provisioner images, etc.) are unaffected since they
+      don't match the imageReferences pattern.
+spec:
+  background: false
+  validationFailureAction: Enforce
+  rules:
+    - name: verify-signature
+      match:
+        any:
+          - resources:
+              kinds:
+                - Pod
+      exclude:
+        any:
+          - resources:
+              namespaces:
+                - local-path-storage
+                - kube-system
+                - kyverno
+      verifyImages:
+        - imageReferences:
+            - "yassine123432/*"   # replace with your actual registry/repo path
+          attestors:
+            - entries:
+                - keyless:
+                    subject: "yassinebenayed100@gmail.com"
+                    issuer: "https://accounts.google.com"

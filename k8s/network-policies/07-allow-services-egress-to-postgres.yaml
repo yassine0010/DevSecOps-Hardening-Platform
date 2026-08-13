@@ -1,0 +1,68 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-auth-egress-to-postgres
+  labels:
+    security: egress-control
+    component: auth-service
+spec:
+  podSelector:
+    matchLabels:
+      app: auth-service
+  policyTypes:
+    - Egress
+  egress:
+    # auth-service connects to postgres
+    - to:
+        - podSelector:
+            matchLabels:
+              app: postgres
+      ports:
+        - protocol: TCP
+          port: 5432
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-puzzle-egress-to-postgres
+  labels:
+    security: egress-control
+    component: puzzle-service
+spec:
+  podSelector:
+    matchLabels:
+      app: puzzle-service
+  policyTypes:
+    - Egress
+  egress:
+    # puzzle-service connects to postgres
+    - to:
+        - podSelector:
+            matchLabels:
+              app: postgres
+      ports:
+        - protocol: TCP
+          port: 5432
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-leaderboard-egress-to-postgres
+  labels:
+    security: egress-control
+    component: leaderboard-service
+spec:
+  podSelector:
+    matchLabels:
+      app: leaderboard-service
+  policyTypes:
+    - Egress
+  egress:
+    # leaderboard-service connects to postgres
+    - to:
+        - podSelector:
+            matchLabels:
+              app: postgres
+      ports:
+        - protocol: TCP
+          port: 5432

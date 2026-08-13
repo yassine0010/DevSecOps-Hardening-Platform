@@ -1,0 +1,43 @@
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: auto-node-routing
+spec:
+  rules:
+    - name: route-dev
+      match:
+        any:
+          - resources:
+              kinds:
+                - Pod
+              namespaces:
+                - dev
+      mutate:
+        patchStrategicMerge:
+          spec:
+            nodeSelector:
+              environment: dev
+            tolerations:
+              - key: "environment"
+                operator: "Equal"
+                value: "dev"
+                effect: "NoSchedule"
+
+    - name: route-prod
+      match:
+        any:
+          - resources:
+              kinds:
+                - Pod
+              namespaces:
+                - prod
+      mutate:
+        patchStrategicMerge:
+          spec:
+            nodeSelector:
+              environment: prod
+            tolerations:
+              - key: "environment"
+                operator: "Equal"
+                value: "prod"
+                effect: "NoSchedule"

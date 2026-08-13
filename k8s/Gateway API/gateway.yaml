@@ -1,0 +1,10 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway #getway object to route traffic to the  services
+metadata:
+  name: myapp-gateway #object name
+spec:
+  gatewayClassName: nginx #use the nginx fabric implementation to actually run this Gateway.
+  listeners:
+    - name: http
+      protocol: HTTP #the listener understands HTTP
+      port: 80

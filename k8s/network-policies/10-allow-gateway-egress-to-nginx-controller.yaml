@@ -1,0 +1,25 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-gateway-egress-to-control-plane
+  labels:
+    security: egress-control
+    component: gateway
+spec:
+  # Target: NGINX Gateway Fabric data-plane pods
+  # These pods need to communicate with the NGF controller in the
+  # nginx-gateway namespace for configuration updates.
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: myapp-gateway-nginx
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: nginx-gateway
+      ports:
+        - protocol: TCP
+          port: 8443
+

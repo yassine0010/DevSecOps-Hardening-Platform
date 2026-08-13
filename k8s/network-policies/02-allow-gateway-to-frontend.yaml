@@ -1,0 +1,25 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-gateway-to-frontend
+  labels:
+    security: ingress-control
+    component: frontend
+spec:
+  # Target: frontend pod
+  podSelector:
+    matchLabels:
+      app: frontend
+  policyTypes:
+    - Ingress
+  ingress:
+    # Only the NGINX Gateway Fabric data-plane pods may reach the frontend.
+    # The gateway pods run in the same (default) namespace, so only a
+    # podSelector is needed — no namespaceSelector required.
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: myapp-gateway-nginx
+      ports:
+        - protocol: TCP
+          port: 8080

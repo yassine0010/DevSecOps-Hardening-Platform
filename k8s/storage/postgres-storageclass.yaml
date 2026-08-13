@@ -1,0 +1,10 @@
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: postgres-retain
+# Uses the cluster's default provisioner (works on most K8s distributions)
+# For cloud providers, this will use the platform's default disk provisioner
+# For local development (minikube/kind), this uses the built-in hostpath provisioner
+provisioner: rancher.io/local-path
+reclaimPolicy: Retain
+volumeBindingMode: WaitForFirstConsumer

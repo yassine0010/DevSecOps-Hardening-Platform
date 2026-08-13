@@ -1,0 +1,47 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-gateway-egress-to-services
+  labels:
+    security: egress-control
+    component: gateway
+spec:
+  # Target: NGINX Gateway Fabric data-plane pods
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: myapp-gateway-nginx
+  policyTypes:
+    - Egress
+  egress:
+    # Frontend (nginx container listens on 8080)
+    - to:
+        - podSelector:
+            matchLabels:
+              app: frontend
+      ports:
+        - protocol: TCP
+          port: 8080
+    # Auth service
+    - to:
+        - podSelector:
+            matchLabels:
+              app: auth-service
+      ports:
+        - protocol: TCP
+          port: 3001
+    # Puzzle service
+    - to:
+        - podSelector:
+            matchLabels:
+              app: puzzle-service
+      ports:
+        - protocol: TCP
+          port: 3002
+    # Leaderboard service
+    - to:
+        - podSelector:
+            matchLabels:
+              app: leaderboard-service
+      ports:
+        - protocol: TCP
+          port: 3003

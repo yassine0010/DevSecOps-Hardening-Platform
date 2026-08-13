@@ -1,0 +1,31 @@
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: disallow-automount-sa-token
+  annotations:
+    policies.kyverno.io/title: Disallow Automount Service Account Token
+    policies.kyverno.io/category: Security, DevSecOps
+    policies.kyverno.io/severity: medium
+    policies.kyverno.io/description: >-
+      ServiceAccount tokens should not be automatically mounted inside Pods unless explicitly required, 
+      as they provide access credentials to the Kubernetes API server. This policy checks all ServiceAccounts 
+      and ensures automountServiceAccountToken is set to false.
+spec:
+  validationFailureAction: Enforce
+  background: true
+  rules:
+    - name: validate-sa-automount-token
+      match:
+        any:
+          - resources:
+              kinds:
+                - ServiceAccount
+      exclude:
+        any:
+          - resources:
+              names:
+                - postgres-sa
+      validate:
+        message: "Automounting ServiceAccount tokens is disallowed. Set automountServiceAccountToken to false."
+        pattern:
+          automountServiceAccountToken: false

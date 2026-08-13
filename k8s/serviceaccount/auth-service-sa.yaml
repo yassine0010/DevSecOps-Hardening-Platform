@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: auth-service-sa
+  labels:
+    app: auth-service
+    component: backend
+    tier: service
+automountServiceAccountToken: false

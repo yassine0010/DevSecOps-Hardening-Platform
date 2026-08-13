@@ -1,0 +1,134 @@
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: enforce-pod-security-restricted
+  annotations:
+    policies.kyverno.io/title: Enforce Pod Security Restricted
+    policies.kyverno.io/category: Pod Security Standards (Restricted), DevSecOps
+    policies.kyverno.io/severity: high
+    policies.kyverno.io/description: >-
+      Enforces the security-hardening guidelines of the Kubernetes 'Restricted' Pod Security Standard.
+      This includes dropping all Linux capabilities, forcing containers to run as non-root, disabling 
+      privilege escalation, and enforcing a read-only root filesystem.
+      Note: Postgres is excluded from the read-only root filesystem requirement since it writes sockets/temp files to local paths.
+      Note: local-path-storage namespace is excluded — the rancher.io/local-path provisioner helper pod
+      is a privileged system component that provisions PVCs and cannot comply with application security rules.
+spec:
+  validationFailureAction: Enforce
+  background: true
+  rules:
+    - name: restrict-capabilities
+      match:
+        any:
+          - resources:
+              kinds:
+                - Pod
+      exclude:
+        any:
+          - resources:
+              namespaces:
+                - local-path-storage
+          - resources:
+              selector:
+                matchLabels:
+                  app: postgres
+      validate:
+        message: "All Linux capabilities must be dropped (securityContext.capabilities.drop must contain 'ALL')."
+        pattern:
+          spec:
+            containers:
+              - securityContext:
+                  capabilities:
+                    drop:
+                      - ALL
+
+    - name: require-non-root
+      match:
+        any:
+          - resources:
+              kinds:
+                - Pod
+      exclude:
+        any:
+          - resources:
+              namespaces:
+                - local-path-storage
+          - resources:
+              selector:
+                matchLabels:
+                  app: postgres
+      validate:
+        message: "Containers must run as non-root (securityContext.runAsNonRoot must be true)."
+        pattern:
+          spec:
+            securityContext:
+              runAsNonRoot: true
+
+    - name: require-ro-rootfs
+      match:
+        any:
+          - resources:
+              kinds:
+                - Pod
+      exclude:
+        any:
+          - resources:
+              namespaces:
+                - local-path-storage
+          - resources:
+              selector:
+                matchLabels:
+                  app: postgres
+      validate:
+        message: "A read-only root filesystem is required (securityContext.readOnlyRootFilesystem must be true)."
+        pattern:
+          spec:
+            containers:
+              - securityContext:
+                  readOnlyRootFilesystem: true
+
+    - name: disallow-privilege-escalation
+      match:
+        any:
+          - resources:
+              kinds:
+                - Pod
+      exclude:
+        any:
+          - resources:
+              namespaces:
+                - local-path-storage
+          - resources:
+              selector:
+                matchLabels:
+                  app: postgres
+      validate:
+        message: "Privilege escalation is prohibited (securityContext.allowPrivilegeEscalation must be false)."
+        pattern:
+          spec:
+            containers:
+              - securityContext:
+                  allowPrivilegeEscalation: false
+
+    - name: require-seccomp-default
+      match:
+        any:
+          - resources:
+              kinds:
+                - Pod
+      exclude:
+        any:
+          - resources:
+              namespaces:
+                - local-path-storage
+          - resources:
+              selector:
+                matchLabels:
+                  app: postgres
+      validate:
+        message: "Seccomp profile must be set to RuntimeDefault (securityContext.seccompProfile.type must be RuntimeDefault)."
+        pattern:
+          spec:
+            securityContext:
+              seccompProfile:
+                type: RuntimeDefault

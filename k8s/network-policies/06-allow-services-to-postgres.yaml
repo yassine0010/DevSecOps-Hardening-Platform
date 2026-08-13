@@ -1,0 +1,30 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-services-to-postgres
+  labels:
+    security: db-access-control
+    component: postgres
+spec:
+  # Target: postgres pod
+  podSelector:
+    matchLabels:
+      app: postgres
+  policyTypes:
+    - Ingress
+  ingress:
+    # Only the three backend services may connect to postgres.
+    # The frontend has no direct database access — it communicates via the API services only.
+    - from:
+        - podSelector:
+            matchLabels:
+              app: auth-service
+        - podSelector:
+            matchLabels:
+              app: puzzle-service
+        - podSelector:
+            matchLabels:
+              app: leaderboard-service
+      ports:
+        - protocol: TCP
+          port: 5432

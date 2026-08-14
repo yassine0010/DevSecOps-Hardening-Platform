@@ -1,6 +1,6 @@
 # Intentional Vulnerabilities
 
-This document details the vulnerabilities intentionally planted in the MindGrid application for DevSecOps scanning and demo purposes.
+This document details the vulnerabilities intentionally planted in the MindGrid application for DevSecOps scanning and demo purposes
 
 ## 1. SQL Injection (SQLi)
 *   **Service:** `puzzle-service`

@@ -14,7 +14,7 @@ This document details the vulnerabilities intentionally planted in the MindGrid 
     cursor.execute(query)
     ```
 
-## 2. Insecure Direct Object Reference (IDOR)
+## 2. Insecure Direct Object Reference (IDOR
 *   **Service:** `leaderboard-service`
 *   **Location:** `leaderboard-service/server.js`, `/submissions/:id` GET and PUT endpoints (approx. lines 63 and 78).
 *   **Vulnerability Type:** Insecure Direct Object Reference (IDOR) / Broken Access Control (CWE-284)

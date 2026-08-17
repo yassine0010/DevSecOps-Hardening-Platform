@@ -43,24 +43,34 @@ jobs:
             -F "active=true" \
             -F "verified=false" \
             -F "close_old_findings=true" \
-            -F "scan_date=$(date +'%Y-%m-%d %H:%M:%S')")
+            -F "scan_date=$(date +%Y-%m-%d)")
           echo "$RESPONSE"
           TEST_ID=$(echo "$RESPONSE" | jq -r '.test')
           echo "test_id=$TEST_ID" >> "$GITHUB_OUTPUT"
 
       - name: Check for High/Critical findings
         run: |
+          TEST_ID="${{ steps.dojo_import.outputs.test_id }}"
+          echo "Checking findings for DefectDojo test ID: ${TEST_ID}"
+
+          if [ -z "$TEST_ID" ] || [ "$TEST_ID" = "null" ]; then
+            echo "::error::Failed to obtain a valid test_id from DefectDojo import."
+            exit 1
+          fi
+
           FINDINGS=$(curl -s -G "${{ secrets.DEFECTDOJO_URL }}/api/v2/findings/" \
             -H "Authorization: Token ${{ secrets.DEFECTDOJO_API_TOKEN }}" \
-            --data-urlencode "test=${{ steps.dojo_import.outputs.test_id }}" \
+            --data-urlencode "test=${TEST_ID}" \
             --data-urlencode "severity=Critical" \
             --data-urlencode "severity=High" \
             --data-urlencode "active=true")
 
-          COUNT=$(echo "$FINDINGS" | jq '.count')
+          echo "DefectDojo Response: ${FINDINGS}"
+
+          COUNT=$(echo "$FINDINGS" | jq -r '.count // 0')
           echo "High/Critical findings: $COUNT"
 
-          if [ "$COUNT" -gt 0 ]; then
+          if [ "$COUNT" != "null" ] && [ "$COUNT" -gt 0 ]; then
             echo "::error::DefectDojo flagged $COUNT High/Critical severity finding(s). Failing check."
             exit 1
           fi

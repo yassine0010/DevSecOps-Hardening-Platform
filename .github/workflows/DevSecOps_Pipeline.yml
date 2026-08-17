@@ -54,7 +54,7 @@ jobs:
           echo "Checking findings for DefectDojo test ID: ${TEST_ID}"
 
           if [ -z "$TEST_ID" ] || [ "$TEST_ID" = "null" ]; then
-            echo "::error::Failed to obtain a valid test_id from DefectDojo import."
+            echo "::error::Failed to obain a valid test_id from DefectDojo import."
             exit 1
           fi
 

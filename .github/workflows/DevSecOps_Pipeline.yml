@@ -1,0 +1,28 @@
+name: DevSecOps Pipeline
+
+on:
+  pull_request:
+    branches: [ "main" ]
+    paths:
+      - "auth-service/**"
+      - "frontend/**"
+      - "leaderboard-service/**"
+      - "puzzle-service/**"
+      - "db/**"
+      - "k8s/**"
+      - "start_services.sh"
+      - ".github/workflows/**"
+
+jobs:
+  gitleaks-scan:
+    runs-on: self-hosted
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run Gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -23,4 +23,45 @@ jobs:
           fetch-depth: 0
 
       - name: Run Gitleaks
-        run: gitleaks detect --source ./k8s/secrets/mindgrid-secrets.yaml --no-git --verbose
+        run: |
+          gitleaks detect \
+            --source ./k8s/secrets/mindgrid-secrets.yaml \
+            --no-git \
+            --verbose \
+            --report-format json \
+            --report-path gitleaks-report.json \
+            --exit-code 1
+        continue-on-error: true
+
+      - name: Upload Gitleaks report to DefectDojo
+        id: dojo_import
+        run: |
+          RESPONSE=$(curl -s -X POST "${{ secrets.DEFECTDOJO_URL }}/api/v2/import-scan/" \
+            -H "Authorization: Token ${{ secrets.DEFECTDOJO_API_TOKEN }}" \
+            -F "scan_type=Gitleaks Scan" \
+            -F "file=@gitleaks-report.json" \
+            -F "engagement=1" \
+            -F "active=true" \
+            -F "verified=false" \
+            -F "close_old_findings=true" \
+            -F "scan_date=$(date +%Y-%m-%d)")
+          echo "$RESPONSE"
+          TEST_ID=$(echo "$RESPONSE" | jq -r '.test')
+          echo "test_id=$TEST_ID" >> "$GITHUB_OUTPUT"
+
+      - name: Check for High/Critical findings
+        run: |
+          FINDINGS=$(curl -s -G "${{ secrets.DEFECTDOJO_URL }}/api/v2/findings/" \
+            -H "Authorization: Token ${{ secrets.DEFECTDOJO_API_TOKEN }}" \
+            --data-urlencode "test=${{ steps.dojo_import.outputs.test_id }}" \
+            --data-urlencode "severity=Critical" \
+            --data-urlencode "severity=High" \
+            --data-urlencode "active=true")
+
+          COUNT=$(echo "$FINDINGS" | jq '.count')
+          echo "High/Critical findings: $COUNT"
+
+          if [ "$COUNT" -gt 0 ]; then
+            echo "::error::DefectDojo flagged $COUNT High/Critical severity finding(s). Failing check."
+            exit 1
+          fi

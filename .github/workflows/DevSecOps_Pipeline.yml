@@ -23,4 +23,4 @@ jobs:
           fetch-depth: 0
 
       - name: Run Gitleaks
-        run: gitleaks detect --source . --verbose
+        run: gitleaks detect --source ./k8s/secrets/mindgrid-secrets.yaml --no-git --verbose

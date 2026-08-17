@@ -56,4 +56,6 @@ fileignoreconfig:
   checksum: 5b9edbc56df91a5e4cdac94436a7cbbfc0c36aa3f935cac67185b7ccb20c88d3
 - filename: leaderboard-service/sbom-leaderboard-service.txt
   checksum: d924609d85a18b15e74d68154c688a7b7c57405c3a56c56f4589ff0ccb144f41
+- filename: k8s/secrets/mindgrid-secrets.yaml
+  checksum: 25ba70ff21afc16a3aaca40329b9ff51baaba03a2be7894c11be5df06e12f867
 version: "1.0"

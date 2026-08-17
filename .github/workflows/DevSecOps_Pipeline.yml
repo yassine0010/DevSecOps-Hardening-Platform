@@ -25,8 +25,7 @@ jobs:
       - name: Run Gitleaks
         run: |
           gitleaks detect \
-            --source ./k8s/secrets/mindgrid-secrets.yaml \
-            --no-git \
+            --source . \
             --verbose \
             --report-format json \
             --report-path gitleaks-report.json \

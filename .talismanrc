@@ -1,4 +1,6 @@
 fileignoreconfig:
+- filename: k8s/secrets/mindgrid-secrets.yaml
+  checksum: 25ba70ff21afc16a3aaca40329b9ff51baaba03a2be7894c11be5df06e12f867
 - filename: .env.example
   checksum: bf278c665c04a1deeed6dbd57b19aa22877266eaeaf39507198b3d77f1635484
 - filename: db/schema.sql

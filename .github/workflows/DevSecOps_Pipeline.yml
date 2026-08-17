@@ -43,7 +43,7 @@ jobs:
             -F "active=true" \
             -F "verified=false" \
             -F "close_old_findings=true" \
-            -F "scan_date=$(date +%Y-%m-%d)")
+            -F "scan_date=$(date +'%Y-%m-%d %H:%M:%S')")
           echo "$RESPONSE"
           TEST_ID=$(echo "$RESPONSE" | jq -r '.test')
           echo "test_id=$TEST_ID" >> "$GITHUB_OUTPUT"

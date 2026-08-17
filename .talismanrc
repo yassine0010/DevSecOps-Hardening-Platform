@@ -56,3 +56,7 @@ fileignoreconfig:
 - filename: k8s/secrets/mindgrid-secrets.yaml
   checksum: d81dd33f87177dbe1234841c5395a6508ca15eb3291f7b43ed824431ddca9f9d
 version: "1.0"
+fileignoreconfig:
+- filename: k8s/secrets/mindgrid-secrets.yaml
+  checksum: 47acc6dbbdb53f5dd1581f15b1f421b3182a7748d70c7258c78664f6e12b766e
+version: "1.0"

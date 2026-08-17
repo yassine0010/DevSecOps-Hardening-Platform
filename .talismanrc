@@ -1,4 +1,6 @@
 fileignoreconfig:
+- filename: k8s/secrets/mindgrid-secrets.yaml
+  checksum: 25ba70ff21afc16a3aaca40329b9ff51baaba03a2be7894c11be5df06e12f867
 - filename: .env.example
   checksum: bf278c665c04a1deeed6dbd57b19aa22877266eaeaf39507198b3d77f1635484
 - filename: db/schema.sql
@@ -21,6 +23,11 @@ fileignoreconfig:
   checksum: ca978e197acf86ae3b2b8f1c1344687d27bb03c36b917e28ee18048ee2679334
 - filename: k8s/secrets/mindgrid-secrets.yaml
   checksum: c17a559737372465038aa14b5373f1224c874d4e5dfcdcf274e54f28e6b1ba87
+  allowed_patterns:
+  - DB_PASSWORD
+  - JWT_SECRET
+  - SHARED_SERVICE_KEY
+  - change-me
 - filename: frontend/src/pages/Login.jsx
   checksum: 468fe4c3bb988c166d9fdb92733d0fb85383666ef874c4cc546b61adc33d973b
 - filename: frontend/src/pages/PuzzleList.jsx
@@ -51,12 +58,6 @@ fileignoreconfig:
   checksum: 5b9edbc56df91a5e4cdac94436a7cbbfc0c36aa3f935cac67185b7ccb20c88d3
 - filename: leaderboard-service/sbom-leaderboard-service.txt
   checksum: d924609d85a18b15e74d68154c688a7b7c57405c3a56c56f4589ff0ccb144f41
-version: "1.0"
-fileignoreconfig:
 - filename: k8s/secrets/mindgrid-secrets.yaml
-  checksum: d81dd33f87177dbe1234841c5395a6508ca15eb3291f7b43ed824431ddca9f9d
-version: "1.0"
-fileignoreconfig:
-- filename: k8s/secrets/mindgrid-secrets.yaml
-  checksum: 47acc6dbbdb53f5dd1581f15b1f421b3182a7748d70c7258c78664f6e12b766e
+  checksum: 25ba70ff21afc16a3aaca40329b9ff51baaba03a2be7894c11be5df06e12f867
 version: "1.0"

@@ -1,4 +1,7 @@
 fileignoreconfig:
+- filename: sonar-project.properties
+  checksum: d1837ccf01b16d279d5327da7756ecac266da309b18e5a46c52b7f275aa62e0a
+
 - filename: test-secret.txt
   checksum: 3d4bb725e6b75e7929c2d7c668ad050dbad8040009030d45378dc63d3748b92a
 - filename: k8s/secrets/mindgrid-secrets.yaml

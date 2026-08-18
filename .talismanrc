@@ -1,4 +1,6 @@
 fileignoreconfig:
+- filename: leaderboard-service/package-lock.json
+  checksum: af149ccb3d187185cab2d064c1b48db862096bde86673383efe73f50ab251c4b
 - filename: auth-service/package-lock.json
   checksum: 61d73042d1256173e58e20dd829c485453db5c1783c7764e8180bcb8d5948847
 - filename: sonar-project.properties

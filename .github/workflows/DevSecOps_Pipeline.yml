@@ -88,7 +88,6 @@ jobs:
 
       - name: SonarQube Scan
         run: |
-          which sonar-scanner
           sonar-scanner \
             -Dsonar.token=${{ secrets.SONAR_TOKEN }} \
             -Dsonar.host.url=${{ secrets.SONAR_HOST_URL }}

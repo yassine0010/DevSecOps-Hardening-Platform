@@ -23,38 +23,41 @@ jobs:
           fetch-depth: 0
 
       - name: Run Gitleaks
+        continue-on-error: true
         run: |
           gitleaks detect \
-            --source . \
-            --verbose \
-            --report-format json \
-            --report-path gitleaks-report.json \
-            --exit-code 1
-        continue-on-error: true
+              --source . \
+              --verbose \
+              --report-format json \
+              --report-path gitleaks-report.json \
+              --exit-code 1
 
       - name: Upload Gitleaks report to DefectDojo
+        if: always()
         id: dojo_import
         run: |
           RESPONSE=$(curl -s -X POST "${{ secrets.DEFECTDOJO_URL }}/api/v2/import-scan/" \
-            -H "Authorization: Token ${{ secrets.DEFECTDOJO_API_TOKEN }}" \
-            -F "scan_type=Gitleaks Scan" \
-            -F "file=@gitleaks-report.json" \
-            -F "engagement=1" \
-            -F "active=true" \
-            -F "verified=false" \
-            -F "close_old_findings=true" \
-            -F "scan_date=$(date +%Y-%m-%d)")
+              -H "Authorization: Token ${{ secrets.DEFECTDOJO_API_TOKEN }}" \
+              -F "scan_type=Gitleaks Scan" \
+              -F "file=@gitleaks-report.json" \
+              -F "engagement=1" \
+              -F "active=true" \
+              -F "verified=false" \
+              -F "close_old_findings=true" \
+              -F "deduplication_on_engagement=true" \
+              -F "scan_date=$(date +%Y-%m-%d)")
           echo "$RESPONSE"
           TEST_ID=$(echo "$RESPONSE" | jq -r '.test')
           echo "test_id=$TEST_ID" >> "$GITHUB_OUTPUT"
 
       - name: Check for High/Critical findings
+        if: always()
         run: |
           TEST_ID="${{ steps.dojo_import.outputs.test_id }}"
           echo "Checking findings for DefectDojo test ID: ${TEST_ID}"
 
           if [ -z "$TEST_ID" ] || [ "$TEST_ID" = "null" ]; then
-            echo "::error::Failed to obain a valid test_id from DefectDojo import."
+            echo "::error::Failed to obtain a valid test_id from DefectDojo import."
             exit 1
           fi
 
@@ -74,3 +77,17 @@ jobs:
             echo "::error::DefectDojo flagged $COUNT High/Critical severity finding(s). Failing check."
             exit 1
           fi
+
+  sonarqube-scan:
+    runs-on: self-hosted
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: SonarQube Scan
+        uses: SonarSource/sonarqube-scan-action@v4
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}

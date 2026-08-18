@@ -10,7 +10,7 @@ on:
       - "puzzle-service/**"
       - "db/**"
       - "k8s/**"
-      - "start_services.sh"
+
       - ".github/workflows/**"
 
 jobs:

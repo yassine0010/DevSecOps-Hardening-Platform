@@ -1,4 +1,6 @@
 fileignoreconfig:
+- filename: auth-service/package-lock.json
+  checksum: 61d73042d1256173e58e20dd829c485453db5c1783c7764e8180bcb8d5948847
 - filename: sonar-project.properties
   checksum: d26cdba768f56ae9a876008742b34e4445a7f9f76ca54dac674d8fc0d030b432
 - filename: sonar-project.properties

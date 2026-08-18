@@ -94,6 +94,8 @@ jobs:
 
   snyk-scan:
     runs-on: self-hosted
+    env:
+      SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -103,5 +105,8 @@ jobs:
       - name: Run Snyk SCA scan
         run: snyk test --all-projects
         continue-on-error: true
-        env:
-          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+
+      - name: Upload results to Snyk dashboard
+        if: always()
+        run: snyk monitor --all-projects
+        continue-on-error: true

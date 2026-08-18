@@ -1,5 +1,7 @@
 fileignoreconfig:
 - filename: sonar-project.properties
+  checksum: d26cdba768f56ae9a876008742b34e4445a7f9f76ca54dac674d8fc0d030b432
+- filename: sonar-project.properties
   checksum: d1837ccf01b16d279d5327da7756ecac266da309b18e5a46c52b7f275aa62e0a
 - filename: sonar-project.properties
   checksum: d26cdba768f56ae9a876008742b34e4445a7f9f76ca54dac674d8fc0d030b432

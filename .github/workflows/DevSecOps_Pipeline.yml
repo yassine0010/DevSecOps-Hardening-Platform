@@ -10,7 +10,7 @@ on:
       - "puzzle-service/**"
       - "db/**"
       - "k8s/**"
-      - "start_services.sh"
+
       - ".github/workflows/**"
 
 jobs:
@@ -91,3 +91,22 @@ jobs:
           sonar-scanner \
             -Dsonar.token=${{ secrets.SONAR_TOKEN }} \
             -Dsonar.host.url=${{ secrets.SONAR_HOST_URL }}
+
+  snyk-scan:
+    runs-on: self-hosted
+    env:
+      SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run Snyk SCA scan
+        run: snyk test --all-projects
+        continue-on-error: true
+
+      - name: Upload results to Snyk dashboard
+        if: always()
+        run: snyk monitor --all-projects
+        continue-on-error: true

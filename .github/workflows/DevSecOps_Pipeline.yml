@@ -110,3 +110,24 @@ jobs:
         if: always()
         run: snyk monitor --all-projects
         continue-on-error: true
+
+  build-and-scan:
+    runs-on: self-hosted
+    needs: [gitleaks-scan, sonarqube-scan, snyk-scan]
+    strategy:
+      matrix:
+        service: [auth-service, frontend, leaderboard-service, puzzle-service]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Build image
+        run: |
+          docker build -t ${{ matrix.service }}:${{ github.sha }} ./${{ matrix.service }}
+
+      - name: Run Trivy scan
+        run: |
+          trivy image --severity HIGH,CRITICAL --exit-code 1 \
+            ${{ matrix.service }}:${{ github.sha }}

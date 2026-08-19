@@ -129,5 +129,40 @@ jobs:
 
       - name: Run Trivy scan
         run: |
-          trivy image --severity HIGH,CRITICAL  \
+          trivy image --severity HIGH,CRITICAL \
+            --format json \
+            --output trivy-report-${{ matrix.service }}.json \
             ${{ matrix.service }}:${{ github.sha }}
+
+      - name: Upload Trivy report as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: trivy-report-${{ matrix.service }}
+          path: trivy-report-${{ matrix.service }}.json
+
+  upload-to-defectdojo:
+    runs-on: self-hosted
+    needs: [build-and-scan]
+    strategy:
+      matrix:
+        service: [auth-service, frontend, leaderboard-service, puzzle-service]
+    steps:
+      - name: Download Trivy report
+        uses: actions/download-artifact@v4
+        with:
+          name: trivy-report-${{ matrix.service }}
+
+      - name: Upload Trivy report to DefectDojo
+        run: |
+          RESPONSE=$(curl -s -X POST "${{ secrets.DEFECTDOJO_URL }}/api/v2/import-scan/" \
+            -H "Authorization: Token ${{ secrets.DEFECTDOJO_API_TOKEN }}" \
+            -F "scan_type=Trivy Scan" \
+            -F "file=@trivy-report-${{ matrix.service }}.json" \
+            -F "engagement=2" \
+            -F "active=true" \
+            -F "verified=false" \
+            -F "close_old_findings=true" \
+            -F "deduplication_on_engagement=true" \
+            -F "service=${{ matrix.service }}" \
+            -F "scan_date=$(date +%Y-%m-%d)")
+          echo "$RESPONSE"

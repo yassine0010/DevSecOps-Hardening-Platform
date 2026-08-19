@@ -10,7 +10,6 @@ on:
       - "puzzle-service/**"
       - "db/**"
       - "k8s/**"
-
       - ".github/workflows/**"
 
 jobs:
@@ -140,6 +139,16 @@ jobs:
           name: trivy-report-${{ matrix.service }}
           path: trivy-report-${{ matrix.service }}.json
 
+      - name: Save built image as tar artifact
+        run: |
+          docker save ${{ matrix.service }}:${{ github.sha }} -o ${{ matrix.service }}-image.tar
+
+      - name: Upload image tar artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: image-${{ matrix.service }}
+          path: ${{ matrix.service }}-image.tar
+
   upload-to-defectdojo:
     runs-on: self-hosted
     needs: [build-and-scan]
@@ -166,3 +175,90 @@ jobs:
             -F "service=${{ matrix.service }}" \
             -F "scan_date=$(date +%Y-%m-%d)")
           echo "$RESPONSE"
+
+  docker-push:
+    runs-on: self-hosted
+    needs: [build-and-scan]
+    strategy:
+      matrix:
+        service: [auth-service, frontend, leaderboard-service, puzzle-service]
+    steps:
+      - name: Download image tar artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: image-${{ matrix.service }}
+
+      - name: Load image
+        run: docker load -i ${{ matrix.service }}-image.tar
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Tag image for Docker Hub
+        run: |
+          docker tag ${{ matrix.service }}:${{ github.sha }} \
+            ${{ secrets.DOCKERHUB_USERNAME }}/${{ matrix.service }}:${{ github.sha }}
+          docker tag ${{ matrix.service }}:${{ github.sha }} \
+            ${{ secrets.DOCKERHUB_USERNAME }}/${{ matrix.service }}:latest
+
+      - name: Push image to Docker Hub
+        run: |
+          docker push ${{ secrets.DOCKERHUB_USERNAME }}/${{ matrix.service }}:${{ github.sha }}
+          docker push ${{ secrets.DOCKERHUB_USERNAME }}/${{ matrix.service }}:latest
+
+      - name: Save digest to artifact
+        run: |
+          DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' \
+            ${{ secrets.DOCKERHUB_USERNAME }}/${{ matrix.service }}:${{ github.sha }} | cut -d'@' -f2)
+          echo "$DIGEST" > digest-${{ matrix.service }}.txt
+
+      - name: Upload digest artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: digest-${{ matrix.service }}
+          path: digest-${{ matrix.service }}.txt
+
+  cosign-sign:
+    runs-on: self-hosted
+    needs: [docker-push]
+    strategy:
+      matrix:
+        service: [auth-service, frontend, leaderboard-service, puzzle-service]
+    permissions:
+      id-token: write   # required for keyless OIDC signing
+      contents: read
+    steps:
+      - name: Download digest artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: digest-${{ matrix.service }}
+
+      - name: Read digest
+        id: read_digest
+        run: |
+          DIGEST=$(cat digest-${{ matrix.service }}.txt)
+          echo "digest=$DIGEST" >> "$GITHUB_OUTPUT"
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Sign image with cosign (keyless)
+        run: |
+          cosign sign --yes \
+            ${{ secrets.DOCKERHUB_USERNAME }}/${{ matrix.service }}@${{ steps.read_digest.outputs.digest }} \
+            -a "signed-by=${{ secrets.COSIGN_SIGNER_EMAIL }}" \
+            -a "repo=${{ github.repository }}" \
+            -a "sha=${{ github.sha }}"
+
+      - name: Verify signature
+        run: |
+          cosign verify \
+            --certificate-identity-regexp=".*" \
+            --certificate-oidc-issuer="https://token.actions.githubusercontent.com" \
+            ${{ secrets.DOCKERHUB_USERNAME }}/${{ matrix.service }}@${{ steps.read_digest.outputs.digest }}

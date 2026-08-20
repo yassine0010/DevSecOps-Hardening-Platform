@@ -139,16 +139,6 @@ jobs:
           name: trivy-report-${{ matrix.service }}
           path: trivy-report-${{ matrix.service }}.json
 
-      - name: Save built image as tar artifact
-        run: |
-          docker save ${{ matrix.service }}:${{ github.sha }} -o ${{ matrix.service }}-image.tar
-
-      - name: Upload image tar artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: image-${{ matrix.service }}
-          path: ${{ matrix.service }}-image.tar
-
   upload-to-defectdojo:
     runs-on: self-hosted
     needs: [build-and-scan]
@@ -178,19 +168,11 @@ jobs:
 
   docker-push:
     runs-on: self-hosted
-    needs: [build-and-scan]
+    needs: [upload-to-defectdojo]
     strategy:
       matrix:
         service: [auth-service, frontend, leaderboard-service, puzzle-service]
     steps:
-      - name: Download image tar artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: image-${{ matrix.service }}
-
-      - name: Load image
-        run: docker load -i ${{ matrix.service }}-image.tar
-
       - name: Log in to Docker Hub
         uses: docker/login-action@v3
         with:
@@ -252,13 +234,22 @@ jobs:
         run: |
           cosign sign --yes \
             ${{ secrets.DOCKERHUB_USERNAME }}/${{ matrix.service }}@${{ steps.read_digest.outputs.digest }} \
-            -a "signed-by=${{ secrets.COSIGN_SIGNER_EMAIL }}" \
             -a "repo=${{ github.repository }}" \
             -a "sha=${{ github.sha }}"
 
       - name: Verify signature
         run: |
-          cosign verify \
-            --certificate-identity-regexp=".*" \
-            --certificate-oidc-issuer="https://token.actions.githubusercontent.com" \
-            ${{ secrets.DOCKERHUB_USERNAME }}/${{ matrix.service }}@${{ steps.read_digest.outputs.digest }}
+          for i in {1..5}; do
+            echo "Attempt $i to verify signature..."
+            if cosign verify \
+              --certificate-identity-regexp="https://github.com/${{ github.repository }}" \
+              --certificate-oidc-issuer="https://token.actions.githubusercontent.com" \
+              ${{ secrets.DOCKERHUB_USERNAME }}/${{ matrix.service }}@${{ steps.read_digest.outputs.digest }}; then
+              echo "Signature verified successfully!"
+              exit 0
+            fi
+            echo "Verification failed, retrying in 5 seconds (waiting for Rekor/transparency log)..."
+            sleep 5
+          done
+          echo "::error::Cosign verification failed after 5 attempts."
+          exit 1

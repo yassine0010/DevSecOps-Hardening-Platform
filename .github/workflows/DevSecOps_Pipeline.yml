@@ -133,24 +133,6 @@ jobs:
             --output trivy-report-${{ matrix.service }}.json \
             ${{ matrix.service }}:${{ github.sha }}
 
-      - name: Upload Trivy report as artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: trivy-report-${{ matrix.service }}
-          path: trivy-report-${{ matrix.service }}.json
-
-  upload-to-defectdojo:
-    runs-on: self-hosted
-    needs: [build-and-scan]
-    strategy:
-      matrix:
-        service: [auth-service, frontend, leaderboard-service, puzzle-service]
-    steps:
-      - name: Download Trivy report
-        uses: actions/download-artifact@v4
-        with:
-          name: trivy-report-${{ matrix.service }}
-
       - name: Upload Trivy report to DefectDojo
         run: |
           RESPONSE=$(curl -s -X POST "${{ secrets.DEFECTDOJO_URL }}/api/v2/import-scan/" \
@@ -168,7 +150,7 @@ jobs:
 
   docker-push:
     runs-on: self-hosted
-    needs: [upload-to-defectdojo]
+    needs: [build-and-scan]
     strategy:
       matrix:
         service: [auth-service, frontend, leaderboard-service, puzzle-service]

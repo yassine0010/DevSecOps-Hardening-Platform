@@ -1,0 +1,44 @@
+# Values file to install/upgrade Kyverno with tolerations for tainted environment nodes
+admissionController:
+  tolerations:
+    - key: "environment"
+      operator: "Equal"
+      value: "dev"
+      effect: "NoSchedule"
+    - key: "environment"
+      operator: "Equal"
+      value: "prod"
+      effect: "NoSchedule"
+
+backgroundController:
+  tolerations:
+    - key: "environment"
+      operator: "Equal"
+      value: "dev"
+      effect: "NoSchedule"
+    - key: "environment"
+      operator: "Equal"
+      value: "prod"
+      effect: "NoSchedule"
+
+cleanupController:
+  tolerations:
+    - key: "environment"
+      operator: "Equal"
+      value: "dev"
+      effect: "NoSchedule"
+    - key: "environment"
+      operator: "Equal"
+      value: "prod"
+      effect: "NoSchedule"
+
+reportsController:
+  tolerations:
+    - key: "environment"
+      operator: "Equal"
+      value: "dev"
+      effect: "NoSchedule"
+    - key: "environment"
+      operator: "Equal"
+      value: "prod"
+      effect: "NoSchedule"

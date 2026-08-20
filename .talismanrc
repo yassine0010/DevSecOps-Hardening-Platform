@@ -1,4 +1,6 @@
 fileignoreconfig:
+- filename: .github/workflows/DevSecOps_Pipeline.yml
+  checksum: b600f0ddabe1570a9d14cc9c14039a689a8bf8807e6ab25fcd4d354efcb2d8d1
 - filename: k8s/kyverno/kyverno-values.yaml
   checksum: 0af8ae4234ac7d307d8d632672b915a310c9c73b56b437eb3d518296b413dfb7
 - filename: .github/workflows/DevSecOps_Pipeline.yml

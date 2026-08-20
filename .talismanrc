@@ -1,5 +1,7 @@
 fileignoreconfig:
 - filename: .github/workflows/DevSecOps_Pipeline.yml
+  checksum: 81a8aba60c8b429eb1545d49af3526ce797c22658adf1a267d1f29c1883c0405
+- filename: .github/workflows/DevSecOps_Pipeline.yml
   checksum: 81a8aba60c8b429eb1545d49af3526ce797c22658adf1a267d1f29c1883c
 - filename: .github/workflows/DevSecOps_Pipeline.yml
   checksum: b26867200858991126ba01b4e6af4a5831832b0df18d9ed2d7d254b4ba877912

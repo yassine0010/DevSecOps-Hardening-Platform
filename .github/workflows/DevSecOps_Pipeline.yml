@@ -135,7 +135,7 @@ jobs:
 
       - name: Upload Trivy report to DefectDojo
         run: |
-          RESPONSE=$(curl -s -X POST "${{ secrets.DEFECTDOJO_URL }}/api/v2/reimport-scan/" \
+          RESPONSE=$(curl -s -X POST "${{ secrets.DEFECTDOJO_URL }}/api/v2/import-scan/" \
             -H "Authorization: Token ${{ secrets.DEFECTDOJO_API_TOKEN }}" \
             -F "scan_type=Trivy Scan" \
             -F "file=@trivy-report-${{ matrix.service }}.json" \

@@ -1,5 +1,7 @@
 fileignoreconfig:
 - filename: .github/workflows/DevSecOps_Pipeline.yml
+  checksum: b26867200858991126ba01b4e6af4a5831832b0df18d9ed2d7d254b4ba877912
+- filename: .github/workflows/DevSecOps_Pipeline.yml
   checksum: 380d691e7b2c3d5003bcd1f0b549a5840c4e22f0cd9cbfda33501dd29a6b7b13
 - filename: leaderboard-service/package-lock.json
   checksum: af149ccb3d187185cab2d064c1b48db862096bde86673383efe73f50ab251c4b

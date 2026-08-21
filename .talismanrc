@@ -1,4 +1,8 @@
 fileignoreconfig:
+- filename: k8s/storage/postgres-statefulset.yaml
+  checksum: 6bf037bdc83b36027b82b2c3f248512473c9a9427380726a1f5e2eea86075116
+- filename: .github/workflows/DevSecOps_Pipeline.yml
+  checksum: 8f77ac12ded86cf92461c5531f11ff0806b420bfc839fbe1b9aa0f353105a23d
 - filename: .github/workflows/DevSecOps_Pipeline.yml
   checksum: b600f0ddabe1570a9d14cc9c14039a689a8bf8807e6ab25fcd4d354efcb2d8d1
 - filename: k8s/kyverno/kyverno-values.yaml

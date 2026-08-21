@@ -129,6 +129,8 @@ jobs:
       - name: Run Trivy scan
         run: |
           trivy image --severity HIGH,CRITICAL \
+            --skip-db-update \
+            --skip-java-db-update \
             --format json \
             --output trivy-report-${{ matrix.service }}.json \
             ${{ matrix.service }}:${{ github.sha }}

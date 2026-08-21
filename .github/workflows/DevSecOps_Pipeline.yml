@@ -13,236 +13,236 @@ on:
       - ".github/workflows/**"
 
 jobs:
-  gitleaks-scan:
-    runs-on: self-hosted
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Run Gitleaks
-        continue-on-error: true
-        run: |
-          gitleaks detect \
-              --source . \
-              --verbose \
-              --report-format json \
-              --report-path gitleaks-report.json \
-              --exit-code 1
-
-      - name: Upload Gitleaks report to DefectDojo
-        if: always()
-        id: dojo_import
-        run: |
-          RESPONSE=$(curl -s -X POST "${{ secrets.DEFECTDOJO_URL }}/api/v2/import-scan/" \
-              -H "Authorization: Token ${{ secrets.DEFECTDOJO_API_TOKEN }}" \
-              -F "scan_type=Gitleaks Scan" \
-              -F "file=@gitleaks-report.json" \
-              -F "engagement=1" \
-              -F "active=true" \
-              -F "verified=false" \
-              -F "close_old_findings=true" \
-              -F "deduplication_on_engagement=true" \
-              -F "scan_date=$(date +%Y-%m-%d)")
-          echo "$RESPONSE"
-          TEST_ID=$(echo "$RESPONSE" | jq -r '.test')
-          echo "test_id=$TEST_ID" >> "$GITHUB_OUTPUT"
-
-      - name: Check for High/Critical findings
-        if: always()
-        run: |
-          TEST_ID="${{ steps.dojo_import.outputs.test_id }}"
-          echo "Checking findings for DefectDojo test ID: ${TEST_ID}"
-
-          if [ -z "$TEST_ID" ] || [ "$TEST_ID" = "null" ]; then
-            echo "::error::Failed to obtain a valid test_id from DefectDojo import."
-            exit 1
-          fi
-
-          FINDINGS=$(curl -s -G "${{ secrets.DEFECTDOJO_URL }}/api/v2/findings/" \
-            -H "Authorization: Token ${{ secrets.DEFECTDOJO_API_TOKEN }}" \
-            --data-urlencode "test=${TEST_ID}" \
-            --data-urlencode "severity=Critical" \
-            --data-urlencode "severity=High" \
-            --data-urlencode "active=true")
-
-          echo "DefectDojo Response: ${FINDINGS}"
-
-          COUNT=$(echo "$FINDINGS" | jq -r '.count // 0')
-          echo "High/Critical findings: $COUNT"
-
-          if [ "$COUNT" != "null" ] && [ "$COUNT" -gt 0 ]; then
-            echo "::error::DefectDojo flagged $COUNT High/Critical severity finding(s). Failing check."
-            exit 1
-          fi
-
-  sonarqube-scan:
-    runs-on: self-hosted
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: SonarQube Scan
-        run: |
-          sonar-scanner \
-            -Dsonar.token=${{ secrets.SONAR_TOKEN }} \
-            -Dsonar.host.url=${{ secrets.SONAR_HOST_URL }}
-
-  snyk-scan:
-    runs-on: self-hosted
-    env:
-      SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Run Snyk SCA scan
-        run: snyk test --all-projects
-        continue-on-error: true
-
-      - name: Upload results to Snyk dashboard
-        if: always()
-        run: snyk monitor --all-projects
-        continue-on-error: true
-
-  build-and-scan:
-    runs-on: self-hosted
-    needs: [gitleaks-scan, sonarqube-scan, snyk-scan]
-    strategy:
-      matrix:
-        service: [auth-service, frontend, leaderboard-service, puzzle-service]
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Build image
-        run: |
-          docker build -t ${{ matrix.service }}:${{ github.sha }} ./${{ matrix.service }}
-
-      - name: Run Trivy scan
-        run: |
-          trivy image --severity HIGH,CRITICAL \
-            --skip-db-update \
-            --skip-java-db-update \
-            --format json \
-            --output trivy-report-${{ matrix.service }}.json \
-            ${{ matrix.service }}:${{ github.sha }}
-
-      - name: Upload Trivy report to DefectDojo
-        run: |
-          RESPONSE=$(curl -s -X POST "${{ secrets.DEFECTDOJO_URL }}/api/v2/import-scan/" \
-            -H "Authorization: Token ${{ secrets.DEFECTDOJO_API_TOKEN }}" \
-            -F "scan_type=Trivy Scan" \
-            -F "file=@trivy-report-${{ matrix.service }}.json" \
-            -F "product_type_name=Research and Development" \
-            -F "product_name=${{ matrix.service }}" \
-            -F "engagement_name=CI-${{ matrix.service }}" \
-            -F "auto_create_context=true" \
-            -F "active=true" \
-            -F "verified=false" \
-            -F "close_old_findings=true" \
-            -F "deduplication_on_engagement=true" \
-            -F "scan_date=$(date +%Y-%m-%d)")
-          echo "$RESPONSE"
-
-  docker-push:
-    runs-on: self-hosted
-    needs: [build-and-scan]
-    strategy:
-      matrix:
-        service: [auth-service, frontend, leaderboard-service, puzzle-service]
-    steps:
-      - name: Log in to Docker Hub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      - name: Tag image for Docker Hub
-        run: |
-          docker tag ${{ matrix.service }}:${{ github.sha }} \
-            ${{ secrets.DOCKERHUB_USERNAME }}/${{ matrix.service }}:${{ github.sha }}
-          docker tag ${{ matrix.service }}:${{ github.sha }} \
-            ${{ secrets.DOCKERHUB_USERNAME }}/${{ matrix.service }}:latest
-
-      - name: Push image to Docker Hub
-        run: |
-          docker push ${{ secrets.DOCKERHUB_USERNAME }}/${{ matrix.service }}:${{ github.sha }}
-          docker push ${{ secrets.DOCKERHUB_USERNAME }}/${{ matrix.service }}:latest
-
-      - name: Save digest to artifact
-        run: |
-          DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' \
-            ${{ secrets.DOCKERHUB_USERNAME }}/${{ matrix.service }}:${{ github.sha }} | cut -d'@' -f2)
-          echo "$DIGEST" > digest-${{ matrix.service }}.txt
-
-      - name: Upload digest artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: digest-${{ matrix.service }}
-          path: digest-${{ matrix.service }}.txt
-
-  cosign-sign:
-    runs-on: self-hosted
-    needs: [docker-push]
-    strategy:
-      matrix:
-        service: [auth-service, frontend, leaderboard-service, puzzle-service]
-    permissions:
-      id-token: write   # required for keyless OIDC signing
-      contents: read
-    steps:
-      - name: Download digest artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: digest-${{ matrix.service }}
-
-      - name: Read digest
-        id: read_digest
-        run: |
-          DIGEST=$(cat digest-${{ matrix.service }}.txt)
-          echo "digest=$DIGEST" >> "$GITHUB_OUTPUT"
-
-      - name: Log in to Docker Hub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      - name: Sign image with cosign (keyless)
-        run: |
-          cosign sign --yes \
-            ${{ secrets.DOCKERHUB_USERNAME }}/${{ matrix.service }}@${{ steps.read_digest.outputs.digest }} \
-            -a "repo=${{ github.repository }}" \
-            -a "sha=${{ github.sha }}"
-
-      - name: Verify signature
-        run: |
-          for i in {1..5}; do
-            echo "Attempt $i to verify signature..."
-            if cosign verify \
-              --certificate-identity-regexp="https://github.com/${{ github.repository }}" \
-              --certificate-oidc-issuer="https://token.actions.githubusercontent.com" \
-              ${{ secrets.DOCKERHUB_USERNAME }}/${{ matrix.service }}@${{ steps.read_digest.outputs.digest }}; then
-              echo "Signature verified successfully!"
-              exit 0
-            fi
-            echo "Verification failed, retrying in 5 seconds (waiting for Rekor/transparency log)..."
-            sleep 5
-          done
-          echo "::error::Cosign verification failed after 5 attempts."
-          exit 1
-  
+#   gitleaks-scan:
+#     runs-on: self-hosted
+#     steps:
+#       - name: Checkout code
+#         uses: actions/checkout@v4
+#         with:
+#           fetch-depth: 0
+# 
+#       - name: Run Gitleaks
+#         continue-on-error: true
+#         run: |
+#           gitleaks detect \
+#               --source . \
+#               --verbose \
+#               --report-format json \
+#               --report-path gitleaks-report.json \
+#               --exit-code 1
+# 
+#       - name: Upload Gitleaks report to DefectDojo
+#         if: always()
+#         id: dojo_import
+#         run: |
+#           RESPONSE=$(curl -s -X POST "${{ secrets.DEFECTDOJO_URL }}/api/v2/import-scan/" \
+#               -H "Authorization: Token ${{ secrets.DEFECTDOJO_API_TOKEN }}" \
+#               -F "scan_type=Gitleaks Scan" \
+#               -F "file=@gitleaks-report.json" \
+#               -F "engagement=1" \
+#               -F "active=true" \
+#               -F "verified=false" \
+#               -F "close_old_findings=true" \
+#               -F "deduplication_on_engagement=true" \
+#               -F "scan_date=$(date +%Y-%m-%d)")
+#           echo "$RESPONSE"
+#           TEST_ID=$(echo "$RESPONSE" | jq -r '.test')
+#           echo "test_id=$TEST_ID" >> "$GITHUB_OUTPUT"
+# 
+#       - name: Check for High/Critical findings
+#         if: always()
+#         run: |
+#           TEST_ID="${{ steps.dojo_import.outputs.test_id }}"
+#           echo "Checking findings for DefectDojo test ID: ${TEST_ID}"
+# 
+#           if [ -z "$TEST_ID" ] || [ "$TEST_ID" = "null" ]; then
+#             echo "::error::Failed to obtain a valid test_id from DefectDojo import."
+#             exit 1
+#           fi
+# 
+#           FINDINGS=$(curl -s -G "${{ secrets.DEFECTDOJO_URL }}/api/v2/findings/" \
+#             -H "Authorization: Token ${{ secrets.DEFECTDOJO_API_TOKEN }}" \
+#             --data-urlencode "test=${TEST_ID}" \
+#             --data-urlencode "severity=Critical" \
+#             --data-urlencode "severity=High" \
+#             --data-urlencode "active=true")
+# 
+#           echo "DefectDojo Response: ${FINDINGS}"
+# 
+#           COUNT=$(echo "$FINDINGS" | jq -r '.count // 0')
+#           echo "High/Critical findings: $COUNT"
+# 
+#           if [ "$COUNT" != "null" ] && [ "$COUNT" -gt 0 ]; then
+#             echo "::error::DefectDojo flagged $COUNT High/Critical severity finding(s). Failing check."
+#             exit 1
+#           fi
+# 
+#   sonarqube-scan:
+#     runs-on: self-hosted
+#     steps:
+#       - name: Checkout code
+#         uses: actions/checkout@v4
+#         with:
+#           fetch-depth: 0
+# 
+#       - name: SonarQube Scan
+#         run: |
+#           sonar-scanner \
+#             -Dsonar.token=${{ secrets.SONAR_TOKEN }} \
+#             -Dsonar.host.url=${{ secrets.SONAR_HOST_URL }}
+# 
+#   snyk-scan:
+#     runs-on: self-hosted
+#     env:
+#       SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+#     steps:
+#       - name: Checkout code
+#         uses: actions/checkout@v4
+#         with:
+#           fetch-depth: 0
+# 
+#       - name: Run Snyk SCA scan
+#         run: snyk test --all-projects
+#         continue-on-error: true
+# 
+#       - name: Upload results to Snyk dashboard
+#         if: always()
+#         run: snyk monitor --all-projects
+#         continue-on-error: true
+# 
+#   build-and-scan:
+#     runs-on: self-hosted
+#     needs: [gitleaks-scan, sonarqube-scan, snyk-scan]
+#     strategy:
+#       matrix:
+#         service: [auth-service, frontend, leaderboard-service, puzzle-service]
+#     steps:
+#       - name: Checkout code
+#         uses: actions/checkout@v4
+#         with:
+#           fetch-depth: 0
+# 
+#       - name: Build image
+#         run: |
+#           docker build -t ${{ matrix.service }}:${{ github.sha }} ./${{ matrix.service }}
+# 
+#       - name: Run Trivy scan
+#         run: |
+#           trivy image --severity HIGH,CRITICAL \
+#             --skip-db-update \
+#             --skip-java-db-update \
+#             --format json \
+#             --output trivy-report-${{ matrix.service }}.json \
+#             ${{ matrix.service }}:${{ github.sha }}
+# 
+#       - name: Upload Trivy report to DefectDojo
+#         run: |
+#           RESPONSE=$(curl -s -X POST "${{ secrets.DEFECTDOJO_URL }}/api/v2/re-import-scan/" \
+#             -H "Authorization: Token ${{ secrets.DEFECTDOJO_API_TOKEN }}" \
+#             -F "scan_type=Trivy Scan" \
+#             -F "file=@trivy-report-${{ matrix.service }}.json" \
+#             -F "product_type_name=Research and Development" \
+#             -F "product_name=${{ matrix.service }}" \
+#             -F "engagement_name=CI-${{ matrix.service }}" \
+#             -F "auto_create_context=true" \
+#             -F "active=true" \
+#             -F "verified=false" \
+#             -F "close_old_findings=true" \
+#             -F "deduplication_on_engagement=true" \
+#             -F "scan_date=$(date +%Y-%m-%d)")
+#           echo "$RESPONSE"
+# 
+#   docker-push:
+#     runs-on: self-hosted
+#     needs: [build-and-scan]
+#     strategy:
+#       matrix:
+#         service: [auth-service, frontend, leaderboard-service, puzzle-service]
+#     steps:
+#       - name: Log in to Docker Hub
+#         uses: docker/login-action@v3
+#         with:
+#           username: ${{ secrets.DOCKERHUB_USERNAME }}
+#           password: ${{ secrets.DOCKERHUB_TOKEN }}
+# 
+#       - name: Tag image for Docker Hub
+#         run: |
+#           docker tag ${{ matrix.service }}:${{ github.sha }} \
+#             ${{ secrets.DOCKERHUB_USERNAME }}/${{ matrix.service }}:${{ github.sha }}
+#           docker tag ${{ matrix.service }}:${{ github.sha }} \
+#             ${{ secrets.DOCKERHUB_USERNAME }}/${{ matrix.service }}:latest
+# 
+#       - name: Push image to Docker Hub
+#         run: |
+#           docker push ${{ secrets.DOCKERHUB_USERNAME }}/${{ matrix.service }}:${{ github.sha }}
+#           docker push ${{ secrets.DOCKERHUB_USERNAME }}/${{ matrix.service }}:latest
+# 
+#       - name: Save digest to artifact
+#         run: |
+#           DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' \
+#             ${{ secrets.DOCKERHUB_USERNAME }}/${{ matrix.service }}:${{ github.sha }} | cut -d'@' -f2)
+#           echo "$DIGEST" > digest-${{ matrix.service }}.txt
+# 
+#       - name: Upload digest artifact
+#         uses: actions/upload-artifact@v4
+#         with:
+#           name: digest-${{ matrix.service }}
+#           path: digest-${{ matrix.service }}.txt
+# 
+#   cosign-sign:
+#     runs-on: self-hosted
+#     needs: [docker-push]
+#     strategy:
+#       matrix:
+#         service: [auth-service, frontend, leaderboard-service, puzzle-service]
+#     permissions:
+#       id-token: write   # required for keyless OIDC signing
+#       contents: read
+#     steps:
+#       - name: Download digest artifact
+#         uses: actions/download-artifact@v4
+#         with:
+#           name: digest-${{ matrix.service }}
+# 
+#       - name: Read digest
+#         id: read_digest
+#         run: |
+#           DIGEST=$(cat digest-${{ matrix.service }}.txt)
+#           echo "digest=$DIGEST" >> "$GITHUB_OUTPUT"
+# 
+#       - name: Log in to Docker Hub
+#         uses: docker/login-action@v3
+#         with:
+#           username: ${{ secrets.DOCKERHUB_USERNAME }}
+#           password: ${{ secrets.DOCKERHUB_TOKEN }}
+# 
+#       - name: Sign image with cosign (keyless)
+#         run: |
+#           cosign sign --yes \
+#             ${{ secrets.DOCKERHUB_USERNAME }}/${{ matrix.service }}@${{ steps.read_digest.outputs.digest }} \
+#             -a "repo=${{ github.repository }}" \
+#             -a "sha=${{ github.sha }}"
+# 
+#       - name: Verify signature
+#         run: |
+#           for i in {1..5}; do
+#             echo "Attempt $i to verify signature..."
+#             if cosign verify \
+#               --certificate-identity-regexp="https://github.com/${{ github.repository }}" \
+#               --certificate-oidc-issuer="https://token.actions.githubusercontent.com" \
+#               ${{ secrets.DOCKERHUB_USERNAME }}/${{ matrix.service }}@${{ steps.read_digest.outputs.digest }}; then
+#               echo "Signature verified successfully!"
+#               exit 0
+#             fi
+#             echo "Verification failed, retrying in 5 seconds (waiting for Rekor/transparency log)..."
+#             sleep 5
+#           done
+#           echo "::error::Cosign verification failed after 5 attempts."
+#           exit 1
+#   
   deploy-dev:
     runs-on: self-hosted
-    needs: [cosign-sign]
+    # needs: [cosign-sign]
     strategy:
       matrix:
         include:

@@ -1,4 +1,6 @@
 fileignoreconfig:
+- filename: .github/workflows/DevSecOps_Pipeline.yml
+  checksum: f5226d4fe711e1665bea1a3e8ff9f9783cbce7430e3751f45218fb1d795f5ac1
 - filename: k8s/storage/postgres-statefulset.yaml
   checksum: 6bf037bdc83b36027b82b2c3f248512473c9a9427380726a1f5e2eea86075116
 - filename: .github/workflows/DevSecOps_Pipeline.yml

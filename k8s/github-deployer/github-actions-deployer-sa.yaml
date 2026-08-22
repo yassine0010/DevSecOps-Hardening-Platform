@@ -1,0 +1,14 @@
+# github-actions-deployer-sa.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: github-actions-deployer
+  namespace: dev
+automountServiceAccountToken: false
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: github-actions-deployer
+  namespace: prod
+automountServiceAccountToken: false

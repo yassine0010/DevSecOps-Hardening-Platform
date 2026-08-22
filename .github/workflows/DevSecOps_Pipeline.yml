@@ -129,6 +129,8 @@ jobs:
       - name: Run Trivy scan
         run: |
           trivy image --severity HIGH,CRITICAL \
+            --skip-db-update \
+            --skip-java-db-update \
             --format json \
             --output trivy-report-${{ matrix.service }}.json \
             ${{ matrix.service }}:${{ github.sha }}
@@ -139,12 +141,14 @@ jobs:
             -H "Authorization: Token ${{ secrets.DEFECTDOJO_API_TOKEN }}" \
             -F "scan_type=Trivy Scan" \
             -F "file=@trivy-report-${{ matrix.service }}.json" \
-            -F "engagement=2" \
+            -F "product_type_name=Research and Development" \
+            -F "product_name=${{ matrix.service }}" \
+            -F "engagement_name=CI-${{ matrix.service }}" \
+            -F "auto_create_context=true" \
             -F "active=true" \
             -F "verified=false" \
             -F "close_old_findings=true" \
             -F "deduplication_on_engagement=true" \
-            -F "service=${{ matrix.service }}" \
             -F "scan_date=$(date +%Y-%m-%d)")
           echo "$RESPONSE"
 
@@ -235,3 +239,76 @@ jobs:
           done
           echo "::error::Cosign verification failed after 5 attempts."
           exit 1
+  
+  deploy-dev:
+    runs-on: self-hosted
+    needs: [cosign-sign]
+    strategy:
+      matrix:
+        include:
+          - service: auth-service
+            path: k8s/k8-auth-service/auth-service.yaml
+          - service: frontend
+            path: k8s/k8-frontend/frontend.yaml
+          - service: leaderboard-service
+            path: k8s/k8-leadboard-service/leaderboard-service.yaml
+          - service: puzzle-service
+            path: k8s/k8-puzzle-service/puzzle-service.yaml
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up kubeconfig
+        run: |
+          mkdir -p ~/.kube
+          cat <<EOF > ~/.kube/config
+          apiVersion: v1
+          kind: Config
+          clusters:
+            - name: main-cluster
+              cluster:
+                server: ${{ secrets.KUBE_API_SERVER }}
+                certificate-authority-data: $(echo "${{ secrets.KUBE_CA_CERT }}" | base64 -w0)
+          contexts:
+            - name: dev-context
+              context:
+                cluster: main-cluster
+                namespace: dev
+                user: dev-user
+          current-context: dev-context
+          users:
+            - name: dev-user
+              user:
+                token: ${{ secrets.KUBE_TOKEN_DEV }}
+          EOF
+
+      - name: Verify cluster connectivity
+        run: |
+          kubectl get deployments -n dev
+          kubectl auth can-i create deployments -n dev
+
+      - name: Set image tag for this build
+        run: |
+          sed -i "s|image:.*${{ matrix.service }}.*|image: ${{ secrets.DOCKERHUB_USERNAME }}/${{ matrix.service }}:${{ github.sha }}|" \
+            ${{ matrix.path }}
+
+      - name: Apply entire service folder
+        run: kubectl apply -f $(dirname ${{ matrix.path }})/ -n dev
+
+      - name: Wait for rollout to complete
+        run: kubectl rollout status deployment/${{ matrix.service }} -n dev --timeout=120s
+
+      - name: Verify pod status
+        run: |
+          kubectl get pods -n dev -l app=${{ matrix.service }} -o wide
+          kubectl get deployment ${{ matrix.service }} -n dev
+
+      - name: Fail if rollout unhealthy
+        run: |
+          READY=$(kubectl get deployment ${{ matrix.service }} -n dev -o jsonpath='{.status.readyReplicas}')
+          DESIRED=$(kubectl get deployment ${{ matrix.service }} -n dev -o jsonpath='{.spec.replicas}')
+          echo "Ready: $READY / Desired: $DESIRED"
+          if [ "$READY" != "$DESIRED" ]; then
+            echo "::error::Deployment ${{ matrix.service }} not fully healthy after rollout"
+            exit 1
+          fi

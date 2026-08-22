@@ -1,4 +1,8 @@
 fileignoreconfig:
+- filename: k8s/Gateway API/nginx-proxy.yaml
+  checksum: 2c7b010ee0e26e165facf30b7e0344eaa69057e5baa7a3b3969f3f8039fdca6b
+- filename: .github/workflows/DevSecOps_Pipeline.yml
+  checksum: 0696ceb8a2b40052645acad44e69cb948010c64a43b361c6e01bb018cfab94e7
 - filename: .github/workflows/DevSecOps_Pipeline.yml
   checksum: f5226d4fe711e1665bea1a3e8ff9f9783cbce7430e3751f45218fb1d795f5ac1
 - filename: k8s/storage/postgres-statefulset.yaml

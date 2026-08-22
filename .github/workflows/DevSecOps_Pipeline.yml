@@ -328,8 +328,8 @@ jobs:
           mkdir -p zap-reports
           docker run --rm -t \
             --network host \
-            --cpus="3.5" \
-            --memory="1g" \
+            --cpus="1" \
+            --memory="3g" \
             -e PYTHONUNBUFFERED=1 \
             -v $(pwd)/zap-reports:/zap/wrk/:rw \
             zaproxy/zaproxy:stable \

@@ -1,5 +1,7 @@
 fileignoreconfig:
 - filename: .github/workflows/DevSecOps_Pipeline.yml
+  checksum: 9916845aa9770742d6c70cc7c172c4474dccec60baf874d5c56fff555e268398
+- filename: .github/workflows/DevSecOps_Pipeline.yml
   checksum: 5fcacf661f3da1b82249f9fae3c32d3ffcfef298a6f9a8c8d29c4ff89116df94
 - filename: OWASP-ZAP/zap-plan.yaml
   checksum: 835c2f331a2621f75e504696a4d4336bec6784c90be42fd34080a2777a3e462a

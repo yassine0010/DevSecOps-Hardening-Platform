@@ -312,3 +312,42 @@ jobs:
             echo "::error::Deployment ${{ matrix.service }} not fully healthy after rollout"
             exit 1
           fi
+
+  zap-active-scan-frontend:
+    runs-on: self-hosted
+    needs: [deploy-dev]
+    steps:
+      - name: Port-forward frontend service
+        run: |
+          kubectl port-forward -n dev svc/frontend 8081:80 &
+          sleep 5
+
+      - name: Run ZAP full scan (active) against frontend
+        continue-on-error: true
+        run: |
+          mkdir -p zap-reports
+          docker run --rm -t \
+            --network host \
+            -v $(pwd)/zap-reports:/zap/wrk/:rw \
+            zaproxy/zaproxy:stable \
+            zap-full-scan.py \
+            -t http://localhost:8081 \
+            -J zap-report.json \
+            -I
+
+      - name: Upload ZAP report to DefectDojo
+        run: |
+          RESPONSE=$(curl -s -X POST "${{ secrets.DEFECTDOJO_URL }}/api/v2/import-scan/" \
+            -H "Authorization: Token ${{ secrets.DEFECTDOJO_API_TOKEN }}" \
+            -F "scan_type=ZAP Scan" \
+            -F "file=@zap-reports/zap-report.json" \
+            -F "product_type_name=Research and Development" \
+            -F "product_name=frontend" \
+            -F "engagement_name=ZAP-CI-frontend" \
+            -F "auto_create_context=true" \
+            -F "active=true" \
+            -F "verified=false" \
+            -F "close_old_findings=true" \
+            -F "deduplication_on_engagement=true" \
+            -F "scan_date=$(date +%Y-%m-%d)")
+          echo "$RESPONSE"

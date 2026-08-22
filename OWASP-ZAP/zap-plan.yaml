@@ -1,0 +1,21 @@
+env:
+  contexts:
+    - name: "auth-service"
+      urls:
+        - "http://192.168.0.185:3001"
+jobs:
+  - type: requestor
+    parameters:
+      user: ""
+    requests:
+      - url: "http://192.168.0.185:3001/api/auth/login"
+        method: "POST"
+        headers:
+          - "Content-Type: application/json"
+        data: '{"username":"test","password":"test"}'
+  - type: passiveScan-wait
+  - type: report
+    parameters:
+      template: "traditional-html"
+      reportFile: "auth-login-report.html"
+      reportDir: "/zap/wrk"

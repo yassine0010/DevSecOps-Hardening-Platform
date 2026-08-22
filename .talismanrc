@@ -1,4 +1,8 @@
 fileignoreconfig:
+- filename: OWASP-ZAP/zap-plan.yaml
+  checksum: 835c2f331a2621f75e504696a4d4336bec6784c90be42fd34080a2777a3e462a
+- filename: .github/workflows/DevSecOps_Pipeline.yml
+  checksum: bc78c3b57293f29fa42e83c093084df97637fa3666b9f9f96eda222684243dc0
 - filename: k8s/Gateway API/nginx-proxy.yaml
   checksum: 2c7b010ee0e26e165facf30b7e0344eaa69057e5baa7a3b3969f3f8039fdca6b
 - filename: .github/workflows/DevSecOps_Pipeline.yml

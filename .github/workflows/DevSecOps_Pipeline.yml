@@ -335,7 +335,7 @@ jobs:
             zaproxy/zaproxy:stable \
             zap-full-scan.py \
             -t http://localhost:8091 \
-            -J zap-report.json \
+            -x zap-report.xml \
             -I
 
       - name: Upload ZAP report to DefectDojo

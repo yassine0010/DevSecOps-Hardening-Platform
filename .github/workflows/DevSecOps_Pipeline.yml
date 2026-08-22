@@ -239,7 +239,22 @@ jobs:
 #           done
 #           echo "::error::Cosign verification failed after 5 attempts."
 #           exit 1
-#   
+#       - name: Generate SBOM
+#         run: |
+#           syft ${{ secrets.DOCKERHUB_USERNAME }}/${{ matrix.service }}@${{ steps.read_digest.outputs.digest }} \
+#             -o cyclonedx-json=sbom-${{ matrix.service }}.json
+#
+#       - name: Attach SBOM to image with cosign
+#         run: |
+#           cosign attach sbom --sbom sbom-${{ matrix.service }}.json \
+#             ${{ secrets.DOCKERHUB_USERNAME }}/${{ matrix.service }}@${{ steps.read_digest.outputs.digest }}
+#
+#       - name: Sign the SBOM attestation
+#         run: |
+#           cosign attest --yes \
+#             --predicate sbom-${{ matrix.service }}.json \
+#             --type cyclonedx \
+#             ${{ secrets.DOCKERHUB_USERNAME }}/${{ matrix.service }}@${{ steps.read_digest.outputs.digest }}
 #   deploy-dev:
 #     runs-on: self-hosted
 #     # needs: [cosign-sign]
@@ -312,45 +327,120 @@ jobs:
 #             echo "::error::Deployment ${{ matrix.service }} not fully healthy after rollout"
 #             exit 1
 #           fi
-
-  zap-active-scan-frontend:
-    runs-on: self-hosted
-    # needs: [deploy-dev]
-    steps:
-      - name: Port-forward frontend service
-        run: |
-          kubectl port-forward -n dev svc/frontend 8091:80 &
-          sleep 5
-
-      - name: Run ZAP full scan (active) against frontend
-        continue-on-error: true
-        run: |
-          mkdir -p zap-reports
-          docker run --rm -t \
-            --network host \
-            --cpus="1" \
-            --memory="3g" \
-            -e PYTHONUNBUFFERED=1 \
-            -v $(pwd)/zap-reports:/zap/wrk/:rw \
-            zaproxy/zaproxy:stable \
-            zap-full-scan.py \
-            -t http://localhost:8091 \
-            -x zap-report.xml \
-            -I
-
-      - name: Upload ZAP report to DefectDojo
-        run: |
-          RESPONSE=$(curl -s -X POST "${{ secrets.DEFECTDOJO_URL }}/api/v2/re-import-scan/" \
-            -H "Authorization: Token ${{ secrets.DEFECTDOJO_API_TOKEN }}" \
-            -F "scan_type=ZAP Scan" \
-            -F "file=@zap-reports/zap-report.json" \
-            -F "product_type_name=Research and Development" \
-            -F "product_name=frontend" \
-            -F "engagement_name=ZAP-CI-frontend" \
-            -F "auto_create_context=true" \
-            -F "active=true" \
-            -F "verified=false" \
-            -F "close_old_findings=true" \
-            -F "deduplication_on_engagement=true" \
-            -F "scan_date=$(date +%Y-%m-%d)")
-          echo "$RESPONSE"
+#
+#  zap-active-scan-frontend:
+#    runs-on: self-hosted
+#    # needs: [deploy-dev]
+#    steps:
+#      - name: Port-forward frontend service
+#        run: |
+#          kubectl port-forward -n dev svc/frontend 8091:80 &
+#          sleep 5
+#
+#      - name: Run ZAP full scan (active) against frontend
+#        continue-on-error: true
+#        run: |
+#          mkdir -p zap-reports
+#          docker run --rm -t \
+#            --network host \
+#            --cpus="1" \
+#            --memory="3g" \
+#            -e PYTHONUNBUFFERED=1 \
+#            -v $(pwd)/zap-reports:/zap/wrk/:rw \
+#            zaproxy/zaproxy:stable \
+#            zap-full-scan.py \
+#            -t http://localhost:8091 \
+#            -x zap-report.xml \
+#            -I
+#
+#      - name: Upload ZAP report to DefectDojo
+#        run: |
+#          RESPONSE=$(curl -s -X POST "${{ secrets.DEFECTDOJO_URL }}/api/v2/re-import-scan/" \
+#            -H "Authorization: Token ${{ secrets.DEFECTDOJO_API_TOKEN }}" \
+#            -F "scan_type=ZAP Scan" \
+#            -F "file=@zap-reports/zap-report.xml" \
+#            -F "product_type_name=Research and Development" \
+#            -F "product_name=frontend" \
+#            -F "engagement_name=ZAP-CI-frontend" \
+#            -F "auto_create_context=true" \
+#            -F "active=true" \
+#            -F "verified=false" \
+#            -F "close_old_findings=true" \
+#            -F "deduplication_on_engagement=true" \
+#            -F "scan_date=$(date +%Y-%m-%d)")
+#          echo "$RESPONSE"
+#
+#   deploy-prod:
+#     runs-on: self-hosted
+#     needs: [zap-active-scan-frontend]
+#     environment:
+#       name: production
+#     strategy:
+#       matrix:
+#         include:
+#           - service: auth-service
+#             path: k8s/k8-auth-service/auth-service.yaml
+#           - service: frontend
+#             path: k8s/k8-frontend/frontend.yaml
+#           - service: leaderboard-service
+#             path: k8s/k8-leadboard-service/leaderboard-service.yaml
+#           - service: puzzle-service
+#             path: k8s/k8-puzzle-service/puzzle-service.yaml
+#     steps:
+#       - name: Checkout code
+#         uses: actions/checkout@v4
+#
+#       - name: Set up kubeconfig
+#         run: |
+#           mkdir -p ~/.kube
+#           cat <<EOF > ~/.kube/config
+#           apiVersion: v1
+#           kind: Config
+#           clusters:
+#             - name: main-cluster
+#               cluster:
+#                 server: ${{ secrets.KUBE_API_SERVER }}
+#                 certificate-authority-data: $(echo "${{ secrets.KUBE_CA_CERT }}" | base64 -w0)
+#           contexts:
+#             - name: prod-context
+#               context:
+#                 cluster: main-cluster
+#                 namespace: prod
+#                 user: prod-user
+#           current-context: prod-context
+#           users:
+#             - name: prod-user
+#               user:
+#                 token: ${{ secrets.KUBE_TOKEN_PROD }}
+#           EOF
+#
+#       - name: Verify cluster connectivity
+#         run: |
+#           kubectl get deployments -n prod
+#           kubectl auth can-i create deployments -n prod
+#
+#       - name: Set image tag for this build
+#         run: |
+#           sed -i "s|image:.*${{ matrix.service }}.*|image: ${{ secrets.DOCKERHUB_USERNAME }}/${{ matrix.service }}:${{ github.sha }}|" \
+#             ${{ matrix.path }}
+#
+#       - name: Apply entire service folder
+#         run: kubectl apply -f $(dirname ${{ matrix.path }})/ -n prod
+#
+#       - name: Wait for rollout to complete
+#         run: kubectl rollout status deployment/${{ matrix.service }} -n prod --timeout=120s
+#
+#       - name: Verify pod status
+#         run: |
+#           kubectl get pods -n prod -l app=${{ matrix.service }} -o wide
+#           kubectl get deployment ${{ matrix.service }} -n prod
+#
+#       - name: Fail if rollout unhealthy
+#         run: |
+#           READY=$(kubectl get deployment ${{ matrix.service }} -n prod -o jsonpath='{.status.readyReplicas}')
+#           DESIRED=$(kubectl get deployment ${{ matrix.service }} -n prod -o jsonpath='{.spec.replicas}')
+#           echo "Ready: $READY / Desired: $DESIRED"
+#           if [ "$READY" != "$DESIRED" ]; then
+#             echo "::error::Deployment ${{ matrix.service }} not fully healthy after rollout"
+#             exit 1
+#           fi

@@ -340,7 +340,7 @@ jobs:
 
       - name: Upload ZAP report to DefectDojo
         run: |
-          RESPONSE=$(curl -s -X POST "${{ secrets.DEFECTDOJO_URL }}/api/v2/import-scan/" \
+          RESPONSE=$(curl -s -X POST "${{ secrets.DEFECTDOJO_URL }}/api/v2/re-import-scan/" \
             -H "Authorization: Token ${{ secrets.DEFECTDOJO_API_TOKEN }}" \
             -F "scan_type=ZAP Scan" \
             -F "file=@zap-reports/zap-report.json" \

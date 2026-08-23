@@ -1,0 +1,19 @@
+apiVersion: kyverno.io/v2
+kind: PolicyException
+metadata:
+  name: nginx-gateway-probe-exception
+  namespace: dev
+spec:
+  exceptions:
+    - policyName: require-probes
+      ruleNames:
+        - autogen-validate-liveness-probe
+  match:
+    any:
+      - resources:
+          kinds:
+            - Deployment
+          names:
+            - myapp-gateway-nginx
+          namespaces:
+            - dev

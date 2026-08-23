@@ -345,7 +345,6 @@ jobs:
 #            --network host \
 #            --cpus="1" \
 #            --memory="3g" \
-#            -e PYTHONUNBUFFERED=1 \
 #            -v $(pwd)/zap-reports:/zap/wrk/:rw \
 #            zaproxy/zaproxy:stable \
 #            zap-full-scan.py \

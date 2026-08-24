@@ -1,0 +1,35 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: kubescape-deny-external-egress
+  namespace: kubescape
+spec:
+  podSelector: {}
+  policyTypes:
+    - Egress
+  egress:
+    # Allow internal communication between kubescape components
+    - to:
+        - podSelector: {}
+      ports:
+        - protocol: TCP
+          port: 8080
+        - protocol: TCP
+          port: 443
+        - protocol: TCP
+          port: 4002
+    # Allow DNS resolution
+    - to:
+        - namespaceSelector: {}
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+    # Allow talking to the Kubernetes API server
+    - to:
+        - ipBlock:
+            cidr: 192.168.0.185/32
+      ports:
+        - protocol: TCP
+          port: 6443

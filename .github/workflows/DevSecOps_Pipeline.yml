@@ -1,18 +1,18 @@
-name: DevSecOps Pipeline
-
-on:
-  pull_request:
-    branches: [ "main" ]
-    paths:
-      - "auth-service/**"
-      - "frontend/**"
-      - "leaderboard-service/**"
-      - "puzzle-service/**"
-      - "db/**"
-      - "k8s/**"
-      - ".github/workflows/**"
-
-jobs:
+#name: DevSecOps Pipeline
+#
+#on:
+#  pull_request:
+#    branches: [ "main" ]
+#    paths:
+#      - "auth-service/**"
+#      - "frontend/**"
+#      - "leaderboard-service/**"
+#      - "puzzle-service/**"
+#      - "db/**"
+#      - "k8s/**"
+#      - ".github/workflows/**"
+#
+#jobs:
 #   gitleaks-scan:
 #     runs-on: self-hosted
 #     steps:

@@ -1,4 +1,26 @@
 fileignoreconfig:
+- filename: lynis/install-lynis.sh
+  checksum: 7b954d3d64ff49c8ac735e7ebbfceb4239c08750f22c4e17b4311bcfb9b4177d
+- filename: lynis/run_lynis_scan.sh
+  checksum: 32d7a3bbddfcabe4e1624cc6ab4e385aa4f55d1ca83c0fcda0b27d2256b8a72d
+- filename: .github/workflows/DevSecOps_Pipeline.yml
+  checksum: ddc194eb37839ade38a4847780406673126879c3ac50c8b92c17d5b63eaca758
+- filename: .github/workflows/DevSecOps_Pipeline.yml
+  checksum: 36d1270b9075ce407635cc5efec95b294abd5d947d16e1582f4fb5b08ecabfef
+- filename: .github/workflows/DevSecOps_Pipeline.yml
+  checksum: b30d96c99690501e578c38a26af7b966517939258e97a3ba9a44cbeb09b8f9d2
+- filename: .github/workflows/DevSecOps_Pipeline.yml
+  checksum: 9916845aa9770742d6c70cc7c172c4474dccec60baf874d5c56fff555e268398
+- filename: .github/workflows/DevSecOps_Pipeline.yml
+  checksum: 5fcacf661f3da1b82249f9fae3c32d3ffcfef298a6f9a8c8d29c4ff89116df94
+- filename: OWASP-ZAP/zap-plan.yaml
+  checksum: 835c2f331a2621f75e504696a4d4336bec6784c90be42fd34080a2777a3e462a
+- filename: .github/workflows/DevSecOps_Pipeline.yml
+  checksum: bc78c3b57293f29fa42e83c093084df97637fa3666b9f9f96eda222684243dc0
+- filename: k8s/Gateway API/nginx-proxy.yaml
+  checksum: 2c7b010ee0e26e165facf30b7e0344eaa69057e5baa7a3b3969f3f8039fdca6b
+- filename: .github/workflows/DevSecOps_Pipeline.yml
+  checksum: 0696ceb8a2b40052645acad44e69cb948010c64a43b361c6e01bb018cfab94e7
 - filename: .github/workflows/DevSecOps_Pipeline.yml
   checksum: f5226d4fe711e1665bea1a3e8ff9f9783cbce7430e3751f45218fb1d795f5ac1
 - filename: k8s/storage/postgres-statefulset.yaml

@@ -1,7 +1,7 @@
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: allow-gateway-egress-to-control-plane
+  name: allow-gateway-egress-to-nginx-controller
   labels:
     security: egress-control
     component: gateway
@@ -23,3 +23,9 @@ spec:
         - protocol: TCP
           port: 8443
 
+#Why Port 8443 Specifically
+#Go back to your earlier describe pod output for the controller pod (nginx-gateway-666b6c5cb5-c2cmv):
+#Ports: 8443/TCP (agent-grpc), 9113/TCP (metrics), 8081/TCP (health)
+#Port 8443 is explicitly named agent-grpc — this is the port the controller exposes specifically
+#for nginx-agent  running inside your data-plane pod) to connect to it,
+# using gRPC (a protocol for services to talk to each other efficiently).

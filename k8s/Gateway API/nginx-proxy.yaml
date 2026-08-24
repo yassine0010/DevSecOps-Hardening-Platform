@@ -1,0 +1,16 @@
+apiVersion: gateway.nginx.org/v1alpha2
+kind: NginxProxy
+metadata:
+  name: myapp-gateway-proxy-config
+  namespace: dev
+spec:
+  kubernetes:
+    deployment:
+      pod:
+        nodeSelector:
+          environment: dev
+        tolerations:
+          - key: environment
+            operator: Equal
+            value: dev
+            effect: NoSchedule

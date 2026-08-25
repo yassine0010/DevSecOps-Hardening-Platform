@@ -1,4 +1,6 @@
 fileignoreconfig:
+- filename: README.md
+  checksum: 440474f7eb29f971e87b5a4cdddba83184628059c0faeb9bc44e59447003755e
 - filename: MindGrid Project Report.pdf
   checksum: 1a9615563a85c61807987cd9d6574fc768f05bfcc7146ca06a7d32cd52f39bcc
 - filename: screenshots/image4.png

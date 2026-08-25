@@ -1,4 +1,8 @@
 fileignoreconfig:
+- filename: MindGrid Project Report.pdf
+  checksum: 1a9615563a85c61807987cd9d6574fc768f05bfcc7146ca06a7d32cd52f39bcc
+- filename: screenshots/image4.png
+  checksum: b879c7630e0777d8294689a8065214a15b8f46e3446db8107e00199f2831a9c5
 - filename: lynis/install-lynis.sh
   checksum: 7b954d3d64ff49c8ac735e7ebbfceb4239c08750f22c4e17b4311bcfb9b4177d
 - filename: lynis/run_lynis_scan.sh
